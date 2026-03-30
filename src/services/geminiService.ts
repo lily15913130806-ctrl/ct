@@ -6,11 +6,25 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { OCRResult, SimilarQuestion } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// 延迟初始化，确保在调用时能获取到最新的 process.env.GEMINI_API_KEY
+let aiInstance: GoogleGenAI | null = null;
+
+function getAIInstance() {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
+      throw new Error("未检测到有效的 GEMINI_API_KEY。请确保在 AI Studio 的 Secrets 面板中配置了密钥，或者在部署环境中设置了该环境变量。");
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 export async function identifyWrongQuestion(base64Image: string): Promise<OCRResult> {
+  const ai = getAIInstance();
   const model = "gemini-3-flash-preview";
   const response = await ai.models.generateContent({
+// ... (rest of the file remains the same)
     model,
     contents: {
       parts: [
@@ -55,6 +69,7 @@ export async function generateSimilarQuestions(
   problem: string,
   knowledgePoint: string
 ): Promise<SimilarQuestion[]> {
+  const ai = getAIInstance();
   const model = "gemini-3-flash-preview";
   const response = await ai.models.generateContent({
     model,
